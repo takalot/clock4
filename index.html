@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <title>מערכת ניהול נוכחות - קריאה מ-Google Drive</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables.net-bs5/1.13.5/dataTables.bootstrap5.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            padding: 20px;
+        }
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background-color: #4a6da7;
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            font-weight: bold;
+            padding: 15px 20px;
+        }
+        .btn-primary {
+            background-color: #4a6da7;
+            border-color: #4a6da7;
+        }
+        .btn-primary:hover {
+            background-color: #3a5a8a;
+            border-color: #3a5a8a;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 5px;
+        }
+        .status-in {
+            background-color: #28a745;
+        }
+        .status-out {
+            background-color: #dc3545;
+        }
+        .loader {
+            text-align: center;
+            padding: 30px;
+        }
+        .date-header {
+            background-color: #e7edf7;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        #error-message {
+            color: #dc3545;
+            margin-top: 10px;
+            display: none;
+        }
+        .info-box {
+            background-color: #e7f3ff;
+            border-left: 4px solid #4a6da7;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">מערכת ניהול נוכחות עובדים</h1>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">התחברות ל-Google Drive</div>
+                    <div class="card-body">
+                        <div class="info-box mb-3">
+                            עליך להתחבר לחשבון Google שלך כדי לגשת לקבצים בדרייב.
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="sheetFileId" class="form-label">מזהה קובץ Google Sheet</label>
+                            <input type="text" class="form-control" id="sheetFileId" placeholder="הכנס את מזהה הקובץ מה-URL">
+                            <small class="form-text text-muted">למשל: מתוך הקישור https://docs.google.com/spreadsheets/d/ABC123_XYZ/edit יש להזין ABC123_XYZ</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="datFileId" class="form-label">מזהה קובץ J1.DAT בדרייב</label>
+                            <input type="text" class="form-control" id="datFileId" placeholder="הכנס את מזהה הקובץ מה-URL">
+                        </div>
+                        <button id="authorizeBtn" class="btn btn-primary mb-3">התחבר ל-Google</button>
+                        <button id="loadDataBtn" class="btn btn-success" disabled>טען נתונים מהדרייב</button>
+                        <div id="error-message"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">סינון וחיפוש</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="dateFilter" class="form-label">סינון לפי תאריך</label>
+                                <input type="date" class="form-control" id="dateFilter">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="employeeFilter" class="form-label">סינון לפי עובד</label>
+                                <select class="form-select" id="employeeFilter">
+                                    <option value="">כל העובדים</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="searchInput" class="form-label">חיפוש חופשי</label>
+                            <input type="text" class="form-control" id="searchInput" placeholder="הקלד לחיפוש...">
+                        </div>
+                        <button id="applyFiltersBtn" class="btn btn-primary">החל סינון</button>
+                        <button id="resetFiltersBtn" class="btn btn-outline-secondary ms-2">איפוס</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>נתוני נוכחות</span>
+                <button id="exportBtn" class="btn btn-sm btn-success">ייצוא ל-Excel</button>
+            </div>
+            <div class="card-body">
+                <div id="loader" class="loader" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">טוען...</span>
+                    </div>
+                    <p class="mt-2">טוען נתונים מ-Google Drive...</p>
+                </div>
+                
+                <div id="dataContainer" class="table-container" style="display: none;">
+                    <table id="attendanceTable" class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>תאריך</th>
+                                <th>שעה</th>
+                                <th>שם עובד</th>
+                                <th>מספר זיהוי</th>
+                                <th>מספר שעון</th>
+                                <th>סוג רישום</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- נתונים יטענו דינמית -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">סיכום נוכחות</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h3 class="mb-2" id="totalEmployees">0</h3>
+                                <p class="mb-0">סה״כ עובדים</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h3 class="mb-2" id="presentEmployees">0</h3>
+                                <p class="mb-0">נוכחים כעת</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h3 class="mb-2" id="totalEntries">0</h3>
+                                <p class="mb-0">סה״כ כניסות היום</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Google API Script -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables.net/1.13.5/jquery.dataTables.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables.net-bs5/1.13.5/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script>
+        // Google API תצורה
+        const API_KEY = 'YOUR_API_KEY'; // יש להחליף במפתח API אמיתי
+        const CLIENT_ID = 'YOUR_CLIENT_ID'; // יש להחליף ב-Client ID אמיתי
+        const DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest', 'https://sheets.googleapis.com/$discovery/rest?version=v4'];
+        const SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets.readonly';
+        
+        let tokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+        
+        $(document).ready(function() {
+            // אחסון נתונים גלובלי
+            let contactData = [];
+            let attendanceData = [];
+            let processedData = [];
+            
+            // אתחול Google API
+            initGoogleAPI();
+            
+            // מאזיני אירועים
+            $('#authorizeBtn').click(handleAuthClick);
+            $('#loadDataBtn').click(loadDataFromDrive);
+            $('#applyFiltersBtn').click(applyFilters);
+            $('#resetFiltersBtn').click(resetFilters);
+            $('#exportBtn').click(exportToExcel);
+            $('#searchInput').on('keyup', function() {
+                applyFilters();
+            });
+            
+            // אתחול Google API
+            function initGoogleAPI() {
+                gapi.load('client', initializeGapiClient);
+                
+                // אתחול טוקן לכניסה
+                tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: CLIENT_ID,
+                    scope: SCOPES,
+                    callback: (tokenResponse) => {
+                        $('#loadDataBtn').prop('disabled', false);
+                    }
+                });
+            }
+            
+            async function initializeGapiClient() {
+                await gapi.client.init({
+                    apiKey: API_KEY,
+                    discoveryDocs: DISCOVERY_DOCS,
+                });
+                gapiInited = true;
+            }
+            
+            // טיפול בלחיצה על כפתור ההתחברות
+            function handleAuthClick() {
+                tokenClient.callback = async (resp) => {
+                    if (resp.error !== undefined) {
+                        $('#error-message').text('שגיאה בהתחברות: ' + resp.error).show();
+                        return;
+                    }
+                    $('#loadDataBtn').prop('disabled', false);
+                    $('#authorizeBtn').text('מחובר ל-Google Drive').addClass('btn-success').removeClass('btn-primary');
+                };
+                
+                tokenClient.requestAccessToken({ prompt: '' });
+            }
+            
+            // טעינת נתונים מהדרייב
+            function loadDataFromDrive() {
+                const sheetId = $('#sheetFileId').val();
+                const datFileId = $('#datFileId').val();
+                
+                if (!sheetId || !datFileId) {
+                    $('#error-message').text('נא להזין את מזהי הקבצים').show();
+                    return;
+                }
+                
+                $('#error-message').hide();
+                $('#dataContainer').hide();
+                $('#loader').show();
+                
+                // טעינת נתוני Google Sheet
+                loadSheetData(sheetId)
+                    .then(() => {
+                        // טעינת קובץ DAT
+                        return loadDatFile(datFileId);
+                    })
+                    .then(() => {
+                        // עיבוד הנתונים
+                        processData();
+                    })
+                    .catch(error => {
+                        $('#error-message').text('שגיאה בטעינת הנתונים: ' + error.message).show();
+                        $('#loader').hide();
+                    });
+            }
+            
+            // טעינת נתונים מ-Google Sheet
+            async function loadSheetData(sheetId) {
+                try {
+                    const response = await gapi.client.sheets.spreadsheets.values.get({
+                        spreadsheetId: sheetId,
+                        range: 'Sheet1!A:D',  // יש להתאים את שם הגיליון והטווח לפי הצורך
+                    });
+                    
+                    const rows = response.result.values || [];
+                    contactData = [];
+                    
+                    // דילוג על שורת הכותרת אם קיימת
+                    const startRow = rows[0] && (rows[0][0] === 'A' || rows[0][0] === '22') ? 1 : 0;
+                    
+                    for (let i = startRow; i < rows.length; i++) {
+                        const row = rows[i];
+                        if (row.length >= 3) {
+                            contactData.push({
+                                id: row[2] ? String(row[2]).trim() : '',  // עמודה C
+                                name: row[3] ? String(row[3]).trim() : '', // עמודה D
+                                phone: row[1] ? String(row[1]).trim() : '' // עמודה B
+                            });
+                        }
+                    }
+                    
+                    console.log('נטענו ' + contactData.length + ' אנשי קשר מהגיליון');
+                    return contactData;
+                } catch (error) {
+                    throw new Error('שגיאה בטעינת נתוני Google Sheet: ' + error.message);
+                }
+            }
+            
+            // טעינת קובץ DAT מהדרייב
+            async function loadDatFile(fileId) {
+                try {
+                    // קבלת מידע על הקובץ
+                    const fileResponse = await gapi.client.drive.files.get({
+                        fileId: fileId,
+                        fields: 'name,mimeType'
+                    });
+                    
+                    // הורדת תוכן הקובץ
+                    const response = await gapi.client.drive.files.get({
+                        fileId: fileId,
+                        alt: 'media'
+                    });
+                    
+                    const contents = response.body;
+                    const lines = contents.split('\n');
+                    
+                    attendanceData = [];
+                    
+                    lines.forEach(line => {
+                        line = line.trim();
+                        if (line && line.length >= 25) {  // בדיקה שהשורה באורך תקין
+                            // פענוח לפי המבנה: 07700107042507540029541234
+                            const meter = line.substring(0, 3);
+                            const unknownField = line.substring(3, 5);
+                            const direction = line.substring(5, 6);
+                            const date = line.substring(6, 12);
+                            const time = line.substring(12, 16);
+                            const id = line.substring(16);
+                            
+                            attendanceData.push({
+                                meter,
+                                unknownField,
+                                direction,
+                                date,
+                                time,
+                                id
+                            });
+                        }
+                    });
+                    
+                    console.log('נטענו ' + attendanceData.length + ' רשומות נוכחות מהקובץ');
+                    return attendanceData;
+                } catch (error) {
+                    throw new Error('שגיאה בטעינת קובץ DAT: ' + error.message);
+                }
+            }
+            
+            // פונקציית עיבוד נתונים
+            function processData() {
+                processedData = [];
+                
+                // מיזוג נתוני נוכחות עם נתוני אנשי קשר
+                attendanceData.forEach(record => {
+                    const contact = contactData.find(c => c.id === record.id);
+                    const name = contact ? contact.name : 'לא ידוע';
+                    
+                    const formattedDate = formatDate(record.date);
+                    const formattedTime = formatTime(record.time);
+                    
+                    processedData.push({
+                        date: formattedDate,
+                        rawDate: record.date,
+                        time: formattedTime,
+                        rawTime: record.time,
+                        name: name,
+                        id: record.id,
+                        meter: record.meter,
+                        direction: record.direction === '1' ? 'כניסה' : 'יציאה'
+                    });
+                });
+                
+                // מיון הנתונים לפי תאריך ושעה
+                processedData.sort((a, b) => {
+                    if (a.rawDate === b.rawDate) {
+                        return a.rawTime.localeCompare(b.rawTime);
+                    }
+                    return a.rawDate.localeCompare(b.rawDate);
+                });
+                
+                // מילוי רשימת העובדים לסינון
+                fillEmployeeFilter();
+                
+                // הצגת הנתונים
+                displayData();
+                updateSummary();
+                
+                // הסתרת הלוודר
+                $('#loader').hide();
+                $('#dataContainer').show();
+            }
+            
+            // פונקציית הצגת נתונים
+            function displayData() {
+                if ($.fn.DataTable.isDataTable('#attendanceTable')) {
+                    $('#attendanceTable').DataTable().destroy();
+                }
+                
+                const table = $('#attendanceTable').DataTable({
+                    data: processedData,
+                    columns: [
+                        { data: 'date' },
+                        { data: 'time' },
+                        { data: 'name' },
+                        { data: 'id' },
+                        { data: 'meter' },
+                        { 
+                            data: 'direction',
+                            render: function(data) {
+                                const statusClass = data === 'כניסה' ? 'status-in' : 'status-out';
+                                return `<span class="status-indicator ${statusClass}"></span> ${data}`;
+                            }
+                        }
+                    ],
+                    order: [[0, 'asc'], [1, 'asc']],
+                    language: {
+                        url: '//cdn.datatables.net/plug-ins/1.13.5/i18n/he.json'
+                    },
+                    responsive: true
+                });
+            }
+            
+            // פונקציות עזר לעיצוב תאריך ושעה
+            function formatDate(dateStr) {
+                // המרת פורמט DDMMYY למבנה יותר קריא DD/MM/YYYY
+                const day = dateStr.substring(0, 2);
+                const month = dateStr.substring(2, 4);
+                const year = dateStr.substring(4, 6);
+                return `${day}/${month}/20${year}`;
+            }
+            
+            function formatTime(timeStr) {
+                // המרת פורמט HHMM לפורמט HH:MM
+                const hours = timeStr.substring(0, 2);
+                const minutes = timeStr.substring(2, 4);
+                return `${hours}:${minutes}`;
+            }
+            
+            // מילוי תיבת הבחירה של העובדים
+            function fillEmployeeFilter() {
+                // מציאת כל העובדים הייחודיים
+                const uniqueEmployees = Array.from(new Set(processedData.map(item => item.name)))
+                    .filter(name => name && name !== 'לא ידוע') // סינון שמות ריקים או לא ידועים
+                    .sort(); // מיון לפי א"ב
+                
+                $('#employeeFilter').empty();
+                $('#employeeFilter').append('<option value="">כל העובדים</option>');
+                
+                uniqueEmployees.forEach(name => {
+                    $('#employeeFilter').append(`<option value="${name}">${name}</option>`);
+                });
+            }
+            
+            // פונקציית יישום סינונים
+            function applyFilters() {
+                const dateFilter = $('#dateFilter').val();
+                const employeeFilter = $('#employeeFilter').val();
+                const searchText = $('#searchInput').val().toLowerCase();
+                
+                let filteredData = [...processedData];
+                
+                // סינון לפי תאריך
+                if (dateFilter) {
+                    const selectedDate = moment(dateFilter, 'YYYY-MM-DD');
+                    const formattedDate = selectedDate.format('DD/MM/YYYY');
+                    filteredData = filteredData.filter(item => item.date === formattedDate);
+                }
+                
+                // סינון לפי עובד
+                if (employeeFilter) {
+                    filteredData = filteredData.filter(item => item.name === employeeFilter);
+                }
+                
+                // סינון לפי טקסט חופשי
+                if (searchText) {
+                    filteredData = filteredData.filter(item => 
+                        (item.name && item.name.toLowerCase().includes(searchText)) || 
+                        (item.id && item.id.includes(searchText)) ||
+                        (item.meter && item.meter.includes(searchText))
+                    );
+                }
+                
+                // עדכון הטבלה עם הנתונים המסוננים
+                const table = $('#attendanceTable').DataTable();
+                table.clear();
+                table.rows.add(filteredData);
+                table.draw();
+                
+                // עדכון הסיכום
+                updateSummary(filteredData);
+            }
+            
+            // איפוס סינונים
+            function resetFilters() {
+                $('#dateFilter').val('');
+                $('#employeeFilter').val('');
+                $('#searchInput').val('');
+                
+                const table = $('#attendanceTable').DataTable();
+                table.clear();
+                table.rows.add(processedData);
+                table.draw();
+                
+                updateSummary();
+            }
+            
+            // עדכון תיבת הסיכום
+            function updateSummary(data = processedData) {
+                const uniqueEmployees = [...new Set(data.map(item => item.id))];
+                $('#totalEmployees').text(uniqueEmployees.length);
+                
+                // מספר העובדים הנוכחים כעת (שנכנסו אך לא יצאו)
+                let presentCount = 0;
+                uniqueEmployees.forEach(id => {
+                    const employeeRecords = data.filter(item => item.id === id);
+                    if (employeeRecords.length > 0) {
+                        const lastRecord = employeeRecords.sort((a, b) => {
+                            if (a.rawDate === b.rawDate) {
+                                return a.rawTime.localeCompare(b.rawTime);
+                            }
+                            return a.rawDate.localeCompare(b.rawDate);
+                        }).pop();
+                        
+                        if (lastRecord && lastRecord.direction === 'כניסה') {
+                            presentCount++;
+                        }
+                    }
+                });
+                
+                $('#presentEmployees').text(presentCount);
+                
+                // מספר הכניסות הכולל
+                const entriesCount = data.filter(item => item.direction === 'כניסה').length;
+                $('#totalEntries').text(entriesCount);
+            }
+            
+            // ייצוא לאקסל
+            function exportToExcel() {
+                const table = $('#attendanceTable').DataTable();
+                const visibleData = table.rows({ search: 'applied' }).data().toArray();
+                
+                // הכנת נתונים לייצוא
+                const exportData = visibleData.map(item => ({
+                    'תאריך': item.date,
+                    'שעה': item.time,
+                    'שם': item.name,
+                    'מזהה': item.id,
+                    'מספר שעון': item.meter,
+                    'סוג': item.direction
+                }));
+                
+                const ws = XLSX.utils.json_to_sheet(exportData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "נתוני נוכחות");
+                
+                // שמירת הקובץ
+                const currentTime = moment().format('YYYY-MM-DD_HH-mm');
+                XLSX.writeFile(wb, `נתוני_נוכחות_${currentTime}.xlsx`);
+            }
+        });
+    </script>
+</body>
+</html>
