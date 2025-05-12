@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8">
+  <title>נתוני שעון נוכחות</title>
+  <style>
+    body { font-family: Arial; direction: rtl; padding: 20px; background: #f8f8f8; }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background: #eee; }
+  </style>
+</head>
+<body>
+  <h1>נתוני שעון נוכחות</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>מס' שעון</th>
+        <th>סוג</th>
+        <th>תאריך</th>
+        <th>שעה</th>
+        <th>ת"ז</th>
+      </tr>
+    </thead>
+    <tbody id="data-body"></tbody>
+  </table>
+
+  <script>
+    const apiUrl = "https://script.google.com/macros/s/AKfycbzYB3IZorl0ssZyAogr4o8In3HYj8xGmUI5N0qqD5nwBqRcQp-hzCiYa7OFUZi0M_c_Ig/exec"; // ← שים כאן את הכתובת שלך
+
+    fetch(apiUrl)
+      .then(response => response.json())
+      .then(data => {
+        const tbody = document.getElementById("data-body");
+        data.forEach(row => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${row.clock}</td>
+            <td>${row.type}</td>
+            <td>${row.date}</td>
+            <td>${row.time}</td>
+            <td>${row.id}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      })
+      .catch(err => {
+        document.body.innerHTML += `<p style="color:red">שגיאה בטעינת הנתונים: ${err.message}</p>`;
+      });
+  </script>
+</body>
+</html>
