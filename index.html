@@ -209,10 +209,19 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
     <script>
         // Google API תצורה
-        const API_KEY = 'AKfycbxu7EwGSPN5FAhJSpngd2_iU75meqV6uUU8B_G-XDdHjVSHvvdv1SJOB_n-7WL1MSFs3g'; // יש להחליף במפתח API אמיתי
-        const CLIENT_ID = 'YOUR_CLIENT_ID'; // יש להחליף ב-Client ID אמיתי
-        const DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest', 'https://sheets.googleapis.com/$discovery/rest?version=v4'];
-        const SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets.readonly';
+        //const API_KEY = 'AKfycbxu7EwGSPN5FAhJSpngd2_iU75meqV6uUU8B_G-XDdHjVSHvvdv1SJOB_n-7WL1MSFs3g'; // יש להחליף במפתח API אמיתי
+<script>
+fetch("https://script.google.com/macros/s/19mKb2jSMI59M3pjeIEr6NlSaB8yhAAAk/exec")
+  .then(res => res.json())
+  .then(data => {
+    console.log("נתונים מהשעונים:", data);
+    // הצגה בדף:
+    data.forEach(row => {
+      document.body.innerHTML += `<div>${row.id} - ${row.type} - ${row.date} ${row.time}</div>`;
+    });
+  });
+</script>
+
         
         let tokenClient;
         let gapiInited = false;
