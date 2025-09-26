@@ -44,33 +44,35 @@
     </thead>
   </table>
 
-  <script>
-    $(document).ready(function () {
-      $('#myTable').DataTable({
-        ajax: {
-          url: "https://script.google.com/macros/s/AKfycbyHuuDu4LuoObLdV6bs6coVEpn7ydMfjeXUb9oyL-UqdHQxRDes90YHquw1nki-skGC0w/exec",
-          dataSrc: ""
-        },
-        columns: [
-          { data: "name" },
-          { data: "id" },
-          { data: "tag" },
-          { data: "date" },
-          { data: "time" },
-          { data: "type" },
-          { data: "location" },
-          { data: "address" },
-          { data: "clock_number" }
-        ],
-        language: {
-          url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/he.json"
-        },
-        pageLength: 25
-      });
+  <iframe id="gsheetFrame" src="https://script.google.com/macros/s/AKfycbynJuYc4Zxjg_x1KuEPegyj-bj_C-Fn2F7S86HQy_vsAN-0HRclkcQaasyQXPIOIk6PNQ/exec" style="display:none;"></iframe>
+
+<script>
+  window.addEventListener("message", function(event) {
+    if (!Array.isArray(event.data)) return;
+
+    $('#myTable').DataTable({
+      data: event.data,
+      columns: [
+        { data: "name" },
+        { data: "id" },
+        { data: "tag" },
+        { data: "date" },
+        { data: "time" },
+        { data: "type" },
+        { data: "location" },
+        { data: "address" },
+        { data: "clock_number" }
+      ],
+      language: {
+        url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/he.json"
+      }
     });
-  </script>
+  });
+</script>
+
 
 </body>
 </html>
+
 
 
