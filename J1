@@ -18,15 +18,7 @@
         <th>מס' שעון</th>
         <th>סוג</th>
         <th>תאריך</th>
-        <th>שעה</th>
-        <th>ת"ז</th>
-      </tr>
-    </thead>
-    <tbody id="data-body"></tbody>
-  </table>
-
-  <script>
-    const apiUrl = "https://script.google.com/macros/s/AKfycbzYB3IZorl0ssZyAogr4o8In3HYj8xGmUI5N0qqD5nwBqRcQp-hzCiYa7OFUZi0M_c_Ig/exec"; // ← שים כאן את הכתובת שלך
+        <th>שעה</שים כאן את הכתובת שלך
 
     fetch(apiUrl)
       .then(response => response.json())
