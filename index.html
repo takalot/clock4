@@ -1,17 +1,4 @@
-<!DOCTYPE html>
-<html lang="he" dir="rtl">
-<head>
-  <meta charset="UTF-8">
-  <title>דו"ח נתונים</title>
 
-  <!-- jQuery -->
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-
-  <!-- DataTables CSS + JS -->
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-
-  <style>
     body {
       font-family: Arial, sans-serif;
       margin: 30px;
@@ -39,18 +26,7 @@
         <th>סוג</th>
         <th>מיקום</th>
         <th>כתובת</th>
-        <th>מספר שעון</th>
-      </tr>
-    </thead>
-  </table>
-
-  <iframe id="gsheetFrame" src="https://script.google.com/macros/s/AKfycbw_KetRuVP7UfL3yg7IkC4ooGNPp76mnorzhSH3JpfeRMJDTKVTqCsLhGJIXOBYmsPzMg/exec" style="display:none;"></iframe>
-
-<script>
-  window.addEventListener("message", function(event) {
-    if (!Array.isArray(event.data)) return;
-
-    $('#myTable').DataTable({
+        <th>מספר שעון</({
       data: event.data,
       columns: [
         { data: "name" },
